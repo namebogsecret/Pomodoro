@@ -1,4 +1,3 @@
-```markdown
 # Pomodoro Timer
 
 This is a simple Pomodoro Timer application built with Python using Tkinter for the GUI and Pygame for sound.
@@ -7,8 +6,8 @@ This is a simple Pomodoro Timer application built with Python using Tkinter for 
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/my_pomodoro_project.git
-   cd my_pomodoro_project
+   git clone https://github.com/namebogsecret/Pomodoro.git
+   cd Pomodoro
    ```
 
 2. Create a virtual environment:
@@ -27,5 +26,4 @@ This is a simple Pomodoro Timer application built with Python using Tkinter for 
 Run the application:
 ```bash
 python -m pomodoro.main
-```
 ```
