@@ -1,0 +1,4 @@
+pomodoro/__pycache__/
+__pycache__
+*.wav
+venv
