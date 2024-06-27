@@ -1,3 +1,5 @@
+# main.py
+
 from pomodoro.ui.main import PomodoroTimer
 
 if __name__ == "__main__":

@@ -1,3 +1,5 @@
+# generate_beep.py
+
 import os
 import numpy as np
 import wave
@@ -23,5 +25,7 @@ def generate_beep(frequency, duration, volume, filename):
         wav_file.writeframes(tone.tobytes())
 
 if __name__ == "__main__":
-    from ..config import BEEP_FREQUENCY, BEEP_DURATION, BEEP_VOLUME, BEEP_FILENAME
+    from ..config import BEEP_FREQUENCY, BEEP_DURATION, BEEP_VOLUME
+    from .get_beep_filename import get_beep_filename
+    BEEP_FILENAME = get_beep_filename()
     generate_beep(BEEP_FREQUENCY, BEEP_DURATION, BEEP_VOLUME, BEEP_FILENAME)
