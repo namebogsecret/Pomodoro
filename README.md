@@ -1,4 +1,3 @@
-```markdown
 # Pomodoro Timer
 
 This is a simple Pomodoro Timer application built with Python using Tkinter for the GUI and Pygame for sound.
@@ -27,5 +26,4 @@ This is a simple Pomodoro Timer application built with Python using Tkinter for 
 Run the application:
 ```bash
 python -m pomodoro.main
-```
 ```
