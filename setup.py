@@ -10,11 +10,12 @@ setup(
     install_requires=[
         "numpy",
         "pygame",
-        "tk",
     ],
+    python_requires=">=3.8",
     entry_points={
         "console_scripts": [
             "pomodoro_timer = pomodoro.main:main",
         ],
     },
 )
+
