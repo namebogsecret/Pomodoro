@@ -1,6 +1,8 @@
 # Pomodoro Timer
 
-This is a simple Pomodoro Timer application built with Python using Tkinter for the GUI and Pygame for sound.
+This project provides a lightweight cross-platform Pomodoro timer written in
+Python. The graphical user interface is implemented with Tkinter and audio
+feedback is handled by Pygame. It runs on Windows, macOS and Linux.
 
 ## Installation
 
@@ -23,7 +25,12 @@ This is a simple Pomodoro Timer application built with Python using Tkinter for 
 
 ## Usage
 
-Run the application:
+Launch the GUI from the command line:
 ```bash
-python -m pomodoro.main
+python -m pomodoro
 ```
+or, if installed via ``setup.py``, simply run:
+```bash
+pomodoro_timer
+```
+

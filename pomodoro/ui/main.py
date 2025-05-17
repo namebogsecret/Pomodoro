@@ -1,10 +1,18 @@
+"""Tkinter GUI implementation of the Pomodoro timer."""
+
+from __future__ import annotations
+
 import tkinter as tk
-from tkinter import messagebox
+
 from ..utils.sound import play_sound
 from ..config import WORK_TIME_MIN, BREAK_TIME_MIN
 
 class PomodoroTimer:
-    def __init__(self, master):
+    """Main widget implementing the Pomodoro timer logic."""
+
+    def __init__(self, master: tk.Tk) -> None:
+        """Create and initialize the timer."""
+
         self.master = master
         self.master.title("Pomodoro Timer")
         self.master.resizable(False, False)
@@ -19,7 +27,9 @@ class PomodoroTimer:
         self.settings_frame.grid_remove()
         self.settings_visible = not self.settings_visible
 
-    def create_widgets(self):
+    def create_widgets(self) -> None:
+        """Create all Tkinter widgets."""
+
         self.label = tk.Label(self.master, text="Work Time", font=("Helvetica", 24))
         self.label.grid(row=0, column=0, columnspan=2, pady=10)
 
@@ -45,7 +55,12 @@ class PomodoroTimer:
         self.break_time_entry.bind("<FocusIn>", self.select_all_text)
         self.break_time_entry.bind("<KeyRelease>", self.update_times)
 
-        self.toggle_button = tk.Button(self.master, text="Show Settings", command=self.toggle_settings, font=("Helvetica", 14)) # на английском показать/скрыть настройки будет show/hide settings
+        self.toggle_button = tk.Button(
+            self.master,
+            text="Show Settings",
+            command=self.toggle_settings,
+            font=("Helvetica", 14),
+        )
         self.toggle_button.grid(row=3, column=0, columnspan=2, pady=10)
 
         self.start_button = tk.Button(self.master, text="Start", command=self.start_timer, font=("Helvetica", 14))
@@ -58,14 +73,19 @@ class PomodoroTimer:
 
         self.set_color("white")
 
-    def select_all_text(self, event):
-        event.widget.select_range(0, 'end')
+    def select_all_text(self, event: tk.Event) -> None:
+        """Select all text inside the given entry widget."""
 
-    def set_color(self, color):
+        event.widget.select_range(0, "end")
+
+    def set_color(self, color: str) -> None:
+        """Set the foreground color for timer labels."""
+
         self.label.config(fg=color)
         self.time_label.config(fg=color)
 
-    def toggle_settings(self):
+    def toggle_settings(self) -> None:
+        """Show or hide the settings frame."""
         if self.settings_visible:
             self.settings_frame.grid_remove()
             self.toggle_button.config(text="Show Settings")
@@ -74,7 +94,8 @@ class PomodoroTimer:
             self.toggle_button.config(text="Hide Settings")
         self.settings_visible = not self.settings_visible
 
-    def update_times(self, event):
+    def update_times(self, event: tk.Event | None = None) -> None:
+        """Update the work and break times from the entry fields."""
         try:
             work_minutes = int(self.work_time_entry.get())
             break_minutes = int(self.break_time_entry.get())
@@ -84,12 +105,15 @@ class PomodoroTimer:
         except ValueError:
             pass
 
-    def format_time(self, seconds):
+    def format_time(self, seconds: int) -> str:
+        """Format seconds as ``MM:SS``."""
+
         minutes = seconds // 60
         seconds = seconds % 60
         return f"{minutes:02}:{seconds:02}"
 
-    def update_timer(self):
+    def update_timer(self) -> None:
+        """Update the countdown timer and switch modes when needed."""
         if self.timer_running:
             if self.time_left > 0:
                 self.time_left -= 1
@@ -114,13 +138,15 @@ class PomodoroTimer:
                 self.is_working = not self.is_working
                 self.update_timer()
 
-    def start_timer(self):
+    def start_timer(self) -> None:
+        """Start the timer if it is not already running."""
         if not self.timer_running:
             play_sound()
             self.timer_running = True
             self.update_timer()
 
-    def reset_timer(self):
+    def reset_timer(self) -> None:
+        """Stop the timer and reset to the initial work period."""
         self.timer_running = False
         self.is_working = True
         self.time_left = self.work_time
@@ -136,3 +162,4 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = PomodoroTimer(master=root)
     root.mainloop()
+
