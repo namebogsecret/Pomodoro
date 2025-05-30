@@ -17,13 +17,13 @@ This repository contains a minimalist Pomodoro timer implemented in Python. The 
 ## Current Issues
 
 * **Dependency installation** – Running the test suite requires `pytest`, `numpy` and `pygame`. In restricted environments without internet access these may be missing, so tests can fail to start. Consider bundling wheels or using system packages.
-* **Limited features** – The timer supports basic work/break periods but lacks conveniences such as pausing, presets or tray integration.
+* **Limited features** – The timer supports basic work/break periods but still lacks presets or tray integration. Pause/resume is now implemented.
 * **Audio handling** – `pygame` is used only for short beeps. A lighter alternative (or pure Tkinter sound) might simplify installation.
 * **Packaging** – `setup.py` exists but the project is not published to PyPI. Continuous integration for building and distributing packages would help.
 
 ## Future Development Ideas
 
-* Add pause/resume and long break cycles.
+* Add long break cycles.
 * Support saving user settings (durations, sounds).
 * Provide a command line interface alongside the GUI.
 * Improve unit test coverage and add CI to run them on push.
@@ -33,5 +33,11 @@ This repository contains a minimalist Pomodoro timer implemented in Python. The 
 1. Create a Python virtual environment and install dependencies from `requirements.txt`.
 2. Launch the app with `python -m pomodoro` or the `pomodoro_timer` console script.
 3. Run `pytest` to execute the tests (requires the dependencies mentioned above).
+
+### Helpers
+
+Internal helper scripts live in the `/helpers` directory. They are not part of the
+package but can streamline maintenance tasks. Data files for the agent can be
+stored under `/helpers/data`.
 
 This file serves as a reminder of project structure and open tasks for the next development session.

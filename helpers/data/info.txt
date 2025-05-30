@@ -1,0 +1,2 @@
+Internal notes for the agent can be stored here.
+

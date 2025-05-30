@@ -21,6 +21,7 @@ class PomodoroTimer:
         self.break_time = BREAK_TIME_MIN * 60
         self.is_working = True
         self.timer_running = False
+        self.paused = False
         self.time_left = self.work_time
 
         self.create_widgets()
@@ -66,8 +67,11 @@ class PomodoroTimer:
         self.start_button = tk.Button(self.master, text="Start", command=self.start_timer, font=("Helvetica", 14))
         self.start_button.grid(row=4, column=0, padx=20, pady=10)
 
+        self.pause_button = tk.Button(self.master, text="Pause", command=self.pause_timer, font=("Helvetica", 14))
+        self.pause_button.grid(row=4, column=1, padx=20, pady=10)
+
         self.reset_button = tk.Button(self.master, text="Stop", command=self.reset_timer, font=("Helvetica", 14))
-        self.reset_button.grid(row=4, column=1, padx=20, pady=10)
+        self.reset_button.grid(row=5, column=0, columnspan=2, pady=10)
 
         self.settings_visible = True
 
@@ -139,15 +143,29 @@ class PomodoroTimer:
                 self.update_timer()
 
     def start_timer(self) -> None:
-        """Start the timer if it is not already running."""
+        """Start or resume the timer."""
         if not self.timer_running:
-            play_sound()
+            if not self.paused:
+                play_sound()
+            else:
+                self.paused = False
             self.timer_running = True
+            self.pause_button.config(text="Pause")
             self.update_timer()
+
+    def pause_timer(self) -> None:
+        """Pause the running timer or resume if already paused."""
+        if self.timer_running:
+            self.timer_running = False
+            self.paused = True
+            self.pause_button.config(text="Resume")
+        elif self.paused:
+            self.start_timer()
 
     def reset_timer(self) -> None:
         """Stop the timer and reset to the initial work period."""
         self.timer_running = False
+        self.paused = False
         self.is_working = True
         self.time_left = self.work_time
         self.label.config(text="Work Time")
@@ -157,6 +175,7 @@ class PomodoroTimer:
         self.work_time_entry.insert(0, str(self.work_time // 60))
         self.break_time_entry.delete(0, tk.END)
         self.break_time_entry.insert(0, str(self.break_time // 60))
+        self.pause_button.config(text="Pause")
 
 if __name__ == "__main__":
     root = tk.Tk()
