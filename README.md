@@ -3,6 +3,7 @@
 This project provides a lightweight cross-platform Pomodoro timer written in
 Python. The graphical user interface is implemented with Tkinter and audio
 feedback is handled by Pygame. It runs on Windows, macOS and Linux.
+The timer now supports pausing and resuming sessions.
 
 ## Installation
 
