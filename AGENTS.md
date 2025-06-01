@@ -11,6 +11,8 @@ This repository contains a minimalist Pomodoro timer implemented in Python. The 
     main.py       – Entry point for launching the GUI
     ui/           – Tkinter user interface code
     utils/        – Helper modules for sound generation and playback
+/start.sh        – Simple wrapper running `python -m pomodoro`
+/run.sh          – Update+start helper with logging
 /tests/           – Pytest based unit tests
 ```
 
@@ -31,7 +33,8 @@ This repository contains a minimalist Pomodoro timer implemented in Python. The 
 ## Quick Start for Contributors
 
 1. Create a Python virtual environment and install dependencies from `requirements.txt`.
-2. Launch the app with `python -m pomodoro` or the `pomodoro_timer` console script.
+2. Launch the app with `python -m pomodoro`, the `pomodoro_timer` console script,
+   or simply run `./run.sh` which also updates dependencies and logs to `logs/`.
 3. Run `pytest` to execute the tests (requires the dependencies mentioned above).
 
 ### Helpers
