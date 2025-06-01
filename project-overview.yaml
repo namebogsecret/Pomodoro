@@ -1,39 +1,39 @@
 meta:
-  id: telebot-constructor
-  updated_at: 2025-06-01T11:15:00Z
+  id: pomodoro-timer
+  updated_at: 2025-06-01T08:32:13Z
   owner: vladimir-podlevskikh
 
 idea:
   summary: >
-    Low-code platform that lets non-programmers visually assemble full-featured
-    Telegram bots by snapping together pre-built blocks and deploy them to the
-    cloud in one click.
+    Lightweight cross-platform Pomodoro timer written in Python with a Tkinter
+    GUI and simple audio notifications.
   current_state:
     description: >
-      Proof-of-Concept stage: core drag-and-drop editor works, bots authenticate
-      via token, flows run locally through a docker-compose sandbox.
+      MVP stage: the app lets users start, pause/resume and reset work/break
+      cycles with customizable durations. Basic unit tests validate timer logic
+      and sound generation.
     capabilities:
-      - visual_flow_editor (start, message, buttons, media)
-      - token_based_auth + BotFather auto_registration
-      - live_preview_in_editor
-      - json_import_export
-      - local_docker_compose_smoke_stack
+      - start_stop_cycles
+      - pause_resume
+      - adjustable_durations
+      - beep_sound_notifications
+      - pytest_unit_tests
   planned_state:
     description: >
-      First public beta with marketplace, collaborative editing, managed
-      hosting and AI-powered block suggestions.
+      Version 1.0 release featuring presets, long break cycles, tray
+      integration and packaging for easy installation.
     capabilities:
-      - community_block_marketplace (payments, AI, CRM, analytics)
-      - one_click_deploy (AWS / Fly.io) with HTTPS & auto_scaling
-      - multi_user_collaboration (RBAC)
-      - usage_analytics_dashboard
-      - ai_block_recommendations
+      - pip_distribution
+      - long_break_cycles
+      - settings_persistence
+      - tray_icon_integration
+      - continuous_integration_tests
   nuance_notes:
-    - low_code / zero_code target
-    - target_webhook_ttfb < 200 ms
-    - multi_tenant_day_one
-    - gdpr_compliant_data_retention
+    - cross_platform_python
+    - tkinter_for_ui
+    - pygame_for_audio
+    - minimal_dependencies
 
 stage:
-  current_phase: idea_to_tech_draft
-  progress_pct: 4
+  current_phase: mvp_build
+  progress_pct: 31
