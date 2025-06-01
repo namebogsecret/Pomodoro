@@ -6,6 +6,8 @@ This repository contains a minimalist Pomodoro timer implemented in Python. The 
 /README.md        – Basic install/run instructions
 /setup.py         – Packaging metadata for `pip install`
 /requirements.txt – Runtime dependencies (numpy, pygame)
+/project-tracker.yaml – Detailed progress across 13 stages
+/project-overview.yaml – High level summary and current status
 /pomodoro/        – Application package
     config.py     – Default timer and sound settings
     main.py       – Entry point for launching the GUI
