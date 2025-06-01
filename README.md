@@ -35,3 +35,10 @@ or, if installed via ``setup.py``, simply run:
 pomodoro_timer
 ```
 
+Alternatively you can let `./run.sh` handle updates, dependency
+installation and launch:
+```bash
+./run.sh
+```
+Logs will be saved under the `logs/` directory.
+
