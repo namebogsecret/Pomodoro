@@ -19,7 +19,6 @@ for arg in "$@"; do
             exit 1
             ;;
     esac
-    shift $((0))
 done
 
 LOG_DIR="logs"
