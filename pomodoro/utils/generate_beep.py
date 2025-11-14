@@ -11,9 +11,6 @@ def generate_beep(frequency: int, duration: float, volume: float, filename: str 
     """Generate a sine wave beep and store it as a WAV file."""
 
     filename = Path(filename)
-    if filename.exists():
-        filename.unlink()
-
     sample_rate = 44_100
     n_samples = int(sample_rate * duration)
     t = np.linspace(0, duration, n_samples, False)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tkinter as tk
+from tkinter import messagebox
 
 from ..utils.sound import play_sound
 from ..config import WORK_TIME_MIN, BREAK_TIME_MIN
@@ -23,10 +24,10 @@ class PomodoroTimer:
         self.timer_running = False
         self.paused = False
         self.time_left = self.work_time
+        self.settings_visible = False
 
         self.create_widgets()
         self.settings_frame.grid_remove()
-        self.settings_visible = not self.settings_visible
 
     def create_widgets(self) -> None:
         """Create all Tkinter widgets."""
@@ -73,8 +74,6 @@ class PomodoroTimer:
         self.reset_button = tk.Button(self.master, text="Stop", command=self.reset_timer, font=("Helvetica", 14))
         self.reset_button.grid(row=5, column=0, columnspan=2, pady=10)
 
-        self.settings_visible = True
-
         self.set_color("white")
 
     def select_all_text(self, event: tk.Event) -> None:
@@ -99,15 +98,39 @@ class PomodoroTimer:
         self.settings_visible = not self.settings_visible
 
     def update_times(self, event: tk.Event | None = None) -> None:
-        """Update the work and break times from the entry fields."""
+        """Update the work and break times from the entry fields with validation."""
+        # Prevent changes while timer is running
+        if self.timer_running or self.paused:
+            return
+
         try:
             work_minutes = int(self.work_time_entry.get())
             break_minutes = int(self.break_time_entry.get())
+
+            # Validate work time
+            if work_minutes <= 0 or work_minutes > 1440:
+                messagebox.showerror("Invalid Input", "Work time must be between 1 and 1440 minutes")
+                self.work_time_entry.delete(0, tk.END)
+                self.work_time_entry.insert(0, str(self.work_time // 60))
+                return
+
+            # Validate break time
+            if break_minutes <= 0 or break_minutes > 1440:
+                messagebox.showerror("Invalid Input", "Break time must be between 1 and 1440 minutes")
+                self.break_time_entry.delete(0, tk.END)
+                self.break_time_entry.insert(0, str(self.break_time // 60))
+                return
+
             self.work_time = work_minutes * 60
             self.break_time = break_minutes * 60
             self.reset_timer()
         except ValueError:
-            pass
+            messagebox.showerror("Invalid Input", "Please enter valid numbers")
+            # Reset to current values
+            self.work_time_entry.delete(0, tk.END)
+            self.work_time_entry.insert(0, str(self.work_time // 60))
+            self.break_time_entry.delete(0, tk.END)
+            self.break_time_entry.insert(0, str(self.break_time // 60))
 
     def format_time(self, seconds: int) -> str:
         """Format seconds as ``MM:SS``."""
@@ -122,10 +145,14 @@ class PomodoroTimer:
             if self.time_left > 0:
                 self.time_left -= 1
 
-                if self.is_working and self.time_left <= 0.1 * self.work_time:
-                    self.set_color("red")
+                # Update color based on state and time remaining
+                if self.is_working:
+                    if self.time_left <= 0.1 * self.work_time:
+                        self.set_color("red")
+                    else:
+                        self.set_color("blue")
                 else:
-                    self.set_color("blue" if self.is_working else "green")
+                    self.set_color("green")
 
                 self.time_label.config(text=self.format_time(self.time_left))
                 self.master.after(1000, self.update_timer)

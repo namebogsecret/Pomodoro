@@ -14,7 +14,7 @@ def get_beep_filename() -> str:
     assets_dir = base_dir.parent / "assets"
     assets_dir.mkdir(exist_ok=True)
     params = f"{BEEP_FREQUENCY}_{BEEP_DURATION}_{BEEP_VOLUME}"
-    params_hash = hashlib.md5(params.encode()).hexdigest()
+    params_hash = hashlib.sha256(params.encode()).hexdigest()
     return str(assets_dir / f"beep_{params_hash}.wav")
 
 
