@@ -159,6 +159,22 @@ pomodoro/
     └── logging_config.py # Logging setup
 ```
 
+## Project Status
+
+**Version:** 0.2.0 (Beta)
+
+This project is actively maintained and ready for production use. All critical and high-priority issues have been resolved.
+
+### Documentation
+
+- **[ANALYSIS.md](ANALYSIS.md)** - Detailed technical analysis and issue tracking
+- **[AGENTS.md](AGENTS.md)** - Quick reference for developers and AI agents
+- **[LICENSE](LICENSE)** - MIT License
+
+### Reporting Issues
+
+Found a bug or have a feature request? Please [open an issue](https://github.com/namebogsecret/Pomodoro/issues) on GitHub.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
