@@ -1,10 +1,11 @@
-"""Tkinter GUI implementation of the Pomodoro timer."""
+"""Elegant minimalist Pomodoro timer with premium dark theme."""
 
 from __future__ import annotations
 
 import tkinter as tk
 from tkinter import messagebox
 import logging
+import random
 
 from ..utils.sound import play_sound
 from ..utils.settings import load_settings, save_settings, DEFAULT_SETTINGS
@@ -22,14 +23,91 @@ from ..config import (
 logger = logging.getLogger(__name__)
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# ELEGANT DARK THEME - Premium color palette inspired by modern design systems
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class Theme:
+    """Premium dark theme color palette."""
+
+    # Base colors
+    BG_DEEP = "#0d1117"           # Deep background
+    BG_SURFACE = "#161b22"        # Elevated surface
+    BG_ELEVATED = "#21262d"       # Cards, inputs
+    BG_HOVER = "#30363d"          # Hover states
+
+    # Text colors
+    TEXT_PRIMARY = "#e6edf3"      # Primary text
+    TEXT_SECONDARY = "#7d8590"    # Secondary text
+    TEXT_MUTED = "#484f58"        # Muted/disabled text
+
+    # Accent colors - Work (calm, focused blue)
+    WORK_PRIMARY = "#388bfd"      # Calm blue
+    WORK_GLOW = "#1f6feb"         # Glow effect
+    WORK_MUTED = "#264166"        # Muted work indicator
+
+    # Accent colors - Break (refreshing green)
+    BREAK_PRIMARY = "#3fb950"     # Refreshing green
+    BREAK_GLOW = "#238636"        # Glow effect
+    BREAK_SOFT = "#1a4d2e"        # Soft background
+
+    # Accent colors - Long Break (relaxing purple)
+    LONG_BREAK_PRIMARY = "#a371f7"   # Lavender purple
+    LONG_BREAK_GLOW = "#8957e5"      # Glow effect
+    LONG_BREAK_SOFT = "#3d2a5c"      # Soft background
+
+    # Warning (last 10% of work)
+    WARNING_PRIMARY = "#f85149"   # Alert red
+    WARNING_MUTED = "#5c3a3a"     # Muted warning
+
+    # Success/complete
+    SUCCESS = "#3fb950"           # Green checkmark
+
+    # Borders
+    BORDER_DEFAULT = "#30363d"    # Default border
+    BORDER_MUTED = "#21262d"      # Subtle border
+
+    # Button colors
+    BTN_PRIMARY_BG = "#238636"    # Primary button
+    BTN_PRIMARY_HOVER = "#2ea043" # Primary hover
+    BTN_SECONDARY_BG = "#21262d"  # Secondary button
+    BTN_SECONDARY_HOVER = "#30363d"  # Secondary hover
+
+
+# Break time motivational messages
+BREAK_MESSAGES = [
+    "Time to rest your eyes",
+    "Take a deep breath",
+    "Stretch your shoulders",
+    "Look at something distant",
+    "Hydrate yourself",
+    "A moment of calm",
+    "You've earned this",
+    "Relax and recharge",
+]
+
+LONG_BREAK_MESSAGES = [
+    "Excellent progress today",
+    "Take a real break",
+    "Walk around a bit",
+    "Great work so far",
+    "Refresh your mind",
+    "You're doing great",
+]
+
+
 class PomodoroTimer:
-    """Main widget implementing the Pomodoro timer logic with statistics tracking."""
+    """Elegant minimalist Pomodoro timer with premium dark theme."""
 
     def __init__(self, master: tk.Tk) -> None:
         """Create and initialize the timer."""
         self.master = master
-        self.master.title(f"{APP_NAME} v{APP_VERSION}")
+        self.master.title(f"{APP_NAME}")
         self.master.resizable(False, False)
+        self.master.configure(bg=Theme.BG_DEEP)
+
+        # Remove window decorations for cleaner look (optional)
+        # self.master.overrideredirect(True)
 
         # Load settings
         self.settings = load_settings()
@@ -48,238 +126,454 @@ class PomodoroTimer:
         self.paused = False
         self.time_left = self.work_time
         self.settings_visible = False
-        self.pomodoro_count = 0  # Count of completed pomodoros in current session
-        self.total_session_pomodoros = 0  # Total pomodoros since app start
+        self.pomodoro_count = 0
+        self.total_session_pomodoros = 0
 
         # Auto-start settings
         self.auto_start_breaks = self.settings.get("auto_start_breaks", True)
         self.auto_start_work = self.settings.get("auto_start_work", False)
 
+        # Current motivational message
+        self.current_message = ""
+
         self.create_widgets()
         self.settings_frame.grid_remove()
         self.update_stats_display()
+        self._apply_idle_state()
 
-        logger.info("Pomodoro Timer initialized")
+        logger.info("Pomodoro Timer initialized with elegant theme")
 
     def create_widgets(self) -> None:
-        """Create all Tkinter widgets."""
-        # Main status label
-        self.label = tk.Label(self.master, text="Work Time", font=("Helvetica", 24))
-        self.label.grid(row=0, column=0, columnspan=3, pady=10)
+        """Create all widgets with elegant dark theme."""
+        # Configure grid weights for centering
+        self.master.grid_columnconfigure(0, weight=1)
 
-        # Pomodoro counter display
-        self.counter_label = tk.Label(
+        # ─────────────────────────────────────────────────────────────────────
+        # TOP STATUS AREA
+        # ─────────────────────────────────────────────────────────────────────
+
+        # Subtle status label
+        self.label = tk.Label(
             self.master,
-            text=self._get_counter_text(),
-            font=("Helvetica", 12),
-            fg="gray"
+            text="FOCUS",
+            font=("SF Pro Display", 11, "bold"),
+            fg=Theme.TEXT_MUTED,
+            bg=Theme.BG_DEEP,
+            pady=0
         )
-        self.counter_label.grid(row=1, column=0, columnspan=3, pady=5)
+        self.label.grid(row=0, column=0, pady=(24, 4), sticky="n")
 
-        # Time display
+        # ─────────────────────────────────────────────────────────────────────
+        # MAIN TIMER DISPLAY
+        # ─────────────────────────────────────────────────────────────────────
+
+        # Timer container frame
+        self.timer_frame = tk.Frame(self.master, bg=Theme.BG_DEEP)
+        self.timer_frame.grid(row=1, column=0, pady=(8, 8))
+
+        # Large timer display - monospace for elegance
         self.time_label = tk.Label(
-            self.master,
+            self.timer_frame,
             text=self.format_time(self.time_left),
-            font=("Helvetica", 48)
+            font=("SF Mono", 72, "bold"),
+            fg=Theme.TEXT_PRIMARY,
+            bg=Theme.BG_DEEP
         )
-        self.time_label.grid(row=2, column=0, columnspan=3, pady=10)
+        self.time_label.pack()
 
-        # Progress indicator (dots for pomodoros)
-        self.progress_frame = tk.Frame(self.master)
-        self.progress_frame.grid(row=3, column=0, columnspan=3, pady=5)
+        # ─────────────────────────────────────────────────────────────────────
+        # MOTIVATIONAL MESSAGE (shown during breaks)
+        # ─────────────────────────────────────────────────────────────────────
+
+        self.message_label = tk.Label(
+            self.master,
+            text="",
+            font=("SF Pro Display", 13),
+            fg=Theme.TEXT_MUTED,
+            bg=Theme.BG_DEEP
+        )
+        self.message_label.grid(row=2, column=0, pady=(0, 12))
+
+        # ─────────────────────────────────────────────────────────────────────
+        # PROGRESS INDICATOR - Elegant dots
+        # ─────────────────────────────────────────────────────────────────────
+
+        self.progress_frame = tk.Frame(self.master, bg=Theme.BG_DEEP)
+        self.progress_frame.grid(row=3, column=0, pady=(0, 20))
         self.progress_dots = []
         self._create_progress_dots()
 
-        # Settings frame
-        self.settings_frame = tk.Frame(self.master)
-        self.settings_frame.grid(row=4, column=0, columnspan=3, pady=10)
+        # ─────────────────────────────────────────────────────────────────────
+        # CONTROL BUTTONS - Minimal and elegant
+        # ─────────────────────────────────────────────────────────────────────
 
-        # Work time setting
-        self.work_time_label = tk.Label(
-            self.settings_frame,
-            text="Work time (min):",
-            font=("Helvetica", 12)
-        )
-        self.work_time_label.grid(row=0, column=0, padx=5, pady=3, sticky="e")
-        self.work_time_entry = tk.Entry(self.settings_frame, font=("Helvetica", 12), width=6)
-        self.work_time_entry.grid(row=0, column=1, padx=5, pady=3)
-        self.work_time_entry.insert(0, str(self.work_time // 60))
-        self.work_time_entry.bind("<FocusIn>", self.select_all_text)
-        self.work_time_entry.bind("<FocusOut>", self.update_times)
+        self.button_frame = tk.Frame(self.master, bg=Theme.BG_DEEP)
+        self.button_frame.grid(row=4, column=0, pady=(0, 16))
 
-        # Break time setting
-        self.break_time_label = tk.Label(
-            self.settings_frame,
-            text="Break time (min):",
-            font=("Helvetica", 12)
-        )
-        self.break_time_label.grid(row=1, column=0, padx=5, pady=3, sticky="e")
-        self.break_time_entry = tk.Entry(self.settings_frame, font=("Helvetica", 12), width=6)
-        self.break_time_entry.grid(row=1, column=1, padx=5, pady=3)
-        self.break_time_entry.insert(0, str(self.break_time // 60))
-        self.break_time_entry.bind("<FocusIn>", self.select_all_text)
-        self.break_time_entry.bind("<FocusOut>", self.update_times)
-
-        # Long break time setting
-        self.long_break_label = tk.Label(
-            self.settings_frame,
-            text="Long break (min):",
-            font=("Helvetica", 12)
-        )
-        self.long_break_label.grid(row=2, column=0, padx=5, pady=3, sticky="e")
-        self.long_break_entry = tk.Entry(self.settings_frame, font=("Helvetica", 12), width=6)
-        self.long_break_entry.grid(row=2, column=1, padx=5, pady=3)
-        self.long_break_entry.insert(0, str(self.long_break_time // 60))
-        self.long_break_entry.bind("<FocusIn>", self.select_all_text)
-        self.long_break_entry.bind("<FocusOut>", self.update_times)
-
-        # Pomodoros until long break
-        self.pomo_count_label = tk.Label(
-            self.settings_frame,
-            text="Pomos for long break:",
-            font=("Helvetica", 12)
-        )
-        self.pomo_count_label.grid(row=3, column=0, padx=5, pady=3, sticky="e")
-        self.pomo_count_entry = tk.Entry(self.settings_frame, font=("Helvetica", 12), width=6)
-        self.pomo_count_entry.grid(row=3, column=1, padx=5, pady=3)
-        self.pomo_count_entry.insert(0, str(self.pomodoros_until_long_break))
-        self.pomo_count_entry.bind("<FocusIn>", self.select_all_text)
-        self.pomo_count_entry.bind("<FocusOut>", self.update_times)
-
-        # Auto-start checkboxes
-        self.auto_break_var = tk.BooleanVar(value=self.auto_start_breaks)
-        self.auto_break_check = tk.Checkbutton(
-            self.settings_frame,
-            text="Auto-start breaks",
-            variable=self.auto_break_var,
-            font=("Helvetica", 10),
-            command=self._update_auto_settings
-        )
-        self.auto_break_check.grid(row=4, column=0, columnspan=2, pady=3)
-
-        self.auto_work_var = tk.BooleanVar(value=self.auto_start_work)
-        self.auto_work_check = tk.Checkbutton(
-            self.settings_frame,
-            text="Auto-start work sessions",
-            variable=self.auto_work_var,
-            font=("Helvetica", 10),
-            command=self._update_auto_settings
-        )
-        self.auto_work_check.grid(row=5, column=0, columnspan=2, pady=3)
-
-        # Save settings button
-        self.save_button = tk.Button(
-            self.settings_frame,
-            text="Save Settings",
-            command=self.save_current_settings,
-            font=("Helvetica", 10)
-        )
-        self.save_button.grid(row=6, column=0, columnspan=2, pady=5)
-
-        # Toggle settings button
-        self.toggle_button = tk.Button(
-            self.master,
-            text="Show Settings",
-            command=self.toggle_settings,
-            font=("Helvetica", 12),
-        )
-        self.toggle_button.grid(row=5, column=0, columnspan=3, pady=5)
-
-        # Control buttons frame
-        self.button_frame = tk.Frame(self.master)
-        self.button_frame.grid(row=6, column=0, columnspan=3, pady=10)
-
+        # Start button (primary action)
         self.start_button = tk.Button(
             self.button_frame,
             text="Start",
             command=self.start_timer,
-            font=("Helvetica", 14),
-            width=8
+            font=("SF Pro Display", 13, "bold"),
+            fg=Theme.TEXT_PRIMARY,
+            bg=Theme.BTN_PRIMARY_BG,
+            activeforeground=Theme.TEXT_PRIMARY,
+            activebackground=Theme.BTN_PRIMARY_HOVER,
+            relief="flat",
+            width=10,
+            cursor="hand2",
+            bd=0,
+            highlightthickness=0,
+            pady=10
         )
-        self.start_button.grid(row=0, column=0, padx=10)
+        self.start_button.grid(row=0, column=0, padx=6)
+        self._add_button_hover(self.start_button, Theme.BTN_PRIMARY_BG, Theme.BTN_PRIMARY_HOVER)
 
+        # Pause button
         self.pause_button = tk.Button(
             self.button_frame,
             text="Pause",
             command=self.pause_timer,
-            font=("Helvetica", 14),
-            width=8
+            font=("SF Pro Display", 13),
+            fg=Theme.TEXT_SECONDARY,
+            bg=Theme.BTN_SECONDARY_BG,
+            activeforeground=Theme.TEXT_PRIMARY,
+            activebackground=Theme.BTN_SECONDARY_HOVER,
+            relief="flat",
+            width=10,
+            cursor="hand2",
+            bd=0,
+            highlightthickness=0,
+            pady=10
         )
-        self.pause_button.grid(row=0, column=1, padx=10)
+        self.pause_button.grid(row=0, column=1, padx=6)
+        self._add_button_hover(self.pause_button, Theme.BTN_SECONDARY_BG, Theme.BTN_SECONDARY_HOVER)
 
+        # Reset button
         self.reset_button = tk.Button(
             self.button_frame,
-            text="Stop",
+            text="Reset",
             command=self.reset_timer,
-            font=("Helvetica", 14),
-            width=8
+            font=("SF Pro Display", 13),
+            fg=Theme.TEXT_SECONDARY,
+            bg=Theme.BTN_SECONDARY_BG,
+            activeforeground=Theme.TEXT_PRIMARY,
+            activebackground=Theme.BTN_SECONDARY_HOVER,
+            relief="flat",
+            width=10,
+            cursor="hand2",
+            bd=0,
+            highlightthickness=0,
+            pady=10
         )
-        self.reset_button.grid(row=0, column=2, padx=10)
+        self.reset_button.grid(row=0, column=2, padx=6)
+        self._add_button_hover(self.reset_button, Theme.BTN_SECONDARY_BG, Theme.BTN_SECONDARY_HOVER)
 
-        # Skip button (skip to next phase)
+        # ─────────────────────────────────────────────────────────────────────
+        # SECONDARY CONTROLS - Skip & Settings
+        # ─────────────────────────────────────────────────────────────────────
+
+        self.secondary_frame = tk.Frame(self.master, bg=Theme.BG_DEEP)
+        self.secondary_frame.grid(row=5, column=0, pady=(0, 16))
+
+        # Skip button (subtle)
         self.skip_button = tk.Button(
-            self.master,
-            text="Skip",
+            self.secondary_frame,
+            text="Skip →",
             command=self.skip_phase,
-            font=("Helvetica", 10),
-            fg="gray"
+            font=("SF Pro Display", 11),
+            fg=Theme.TEXT_MUTED,
+            bg=Theme.BG_DEEP,
+            activeforeground=Theme.TEXT_SECONDARY,
+            activebackground=Theme.BG_SURFACE,
+            relief="flat",
+            cursor="hand2",
+            bd=0,
+            highlightthickness=0
         )
-        self.skip_button.grid(row=7, column=0, columnspan=3, pady=5)
+        self.skip_button.grid(row=0, column=0, padx=16)
+        self._add_button_hover(self.skip_button, Theme.BG_DEEP, Theme.BG_SURFACE,
+                               Theme.TEXT_MUTED, Theme.TEXT_SECONDARY)
 
-        # Statistics display
-        self.stats_frame = tk.Frame(self.master)
-        self.stats_frame.grid(row=8, column=0, columnspan=3, pady=10)
+        # Settings toggle (subtle)
+        self.toggle_button = tk.Button(
+            self.secondary_frame,
+            text="Settings",
+            command=self.toggle_settings,
+            font=("SF Pro Display", 11),
+            fg=Theme.TEXT_MUTED,
+            bg=Theme.BG_DEEP,
+            activeforeground=Theme.TEXT_SECONDARY,
+            activebackground=Theme.BG_SURFACE,
+            relief="flat",
+            cursor="hand2",
+            bd=0,
+            highlightthickness=0
+        )
+        self.toggle_button.grid(row=0, column=1, padx=16)
+        self._add_button_hover(self.toggle_button, Theme.BG_DEEP, Theme.BG_SURFACE,
+                               Theme.TEXT_MUTED, Theme.TEXT_SECONDARY)
+
+        # ─────────────────────────────────────────────────────────────────────
+        # SETTINGS PANEL - Hidden by default
+        # ─────────────────────────────────────────────────────────────────────
+
+        self.settings_frame = tk.Frame(
+            self.master,
+            bg=Theme.BG_SURFACE,
+            highlightbackground=Theme.BORDER_DEFAULT,
+            highlightthickness=1
+        )
+        self.settings_frame.grid(row=6, column=0, pady=(0, 16), padx=24, sticky="ew")
+
+        # Settings grid
+        settings_row = 0
+
+        # Work time
+        self._create_setting_row(
+            self.settings_frame, settings_row, "Work duration",
+            self._create_entry("work_time_entry", self.work_time // 60)
+        )
+        settings_row += 1
+
+        # Break time
+        self._create_setting_row(
+            self.settings_frame, settings_row, "Break duration",
+            self._create_entry("break_time_entry", self.break_time // 60)
+        )
+        settings_row += 1
+
+        # Long break time
+        self._create_setting_row(
+            self.settings_frame, settings_row, "Long break",
+            self._create_entry("long_break_entry", self.long_break_time // 60)
+        )
+        settings_row += 1
+
+        # Pomodoros until long break
+        self._create_setting_row(
+            self.settings_frame, settings_row, "Sessions until long break",
+            self._create_entry("pomo_count_entry", self.pomodoros_until_long_break)
+        )
+        settings_row += 1
+
+        # Auto-start checkboxes frame
+        auto_frame = tk.Frame(self.settings_frame, bg=Theme.BG_SURFACE)
+        auto_frame.grid(row=settings_row, column=0, columnspan=2, pady=(12, 8), sticky="w", padx=16)
+
+        self.auto_break_var = tk.BooleanVar(value=self.auto_start_breaks)
+        self.auto_break_check = tk.Checkbutton(
+            auto_frame,
+            text="Auto-start breaks",
+            variable=self.auto_break_var,
+            font=("SF Pro Display", 11),
+            fg=Theme.TEXT_SECONDARY,
+            bg=Theme.BG_SURFACE,
+            activeforeground=Theme.TEXT_PRIMARY,
+            activebackground=Theme.BG_SURFACE,
+            selectcolor=Theme.BG_ELEVATED,
+            command=self._update_auto_settings
+        )
+        self.auto_break_check.grid(row=0, column=0, padx=(0, 24))
+
+        self.auto_work_var = tk.BooleanVar(value=self.auto_start_work)
+        self.auto_work_check = tk.Checkbutton(
+            auto_frame,
+            text="Auto-start work",
+            variable=self.auto_work_var,
+            font=("SF Pro Display", 11),
+            fg=Theme.TEXT_SECONDARY,
+            bg=Theme.BG_SURFACE,
+            activeforeground=Theme.TEXT_PRIMARY,
+            activebackground=Theme.BG_SURFACE,
+            selectcolor=Theme.BG_ELEVATED,
+            command=self._update_auto_settings
+        )
+        self.auto_work_check.grid(row=0, column=1)
+        settings_row += 1
+
+        # Save button
+        self.save_button = tk.Button(
+            self.settings_frame,
+            text="Save",
+            command=self.save_current_settings,
+            font=("SF Pro Display", 11, "bold"),
+            fg=Theme.TEXT_PRIMARY,
+            bg=Theme.BTN_PRIMARY_BG,
+            activeforeground=Theme.TEXT_PRIMARY,
+            activebackground=Theme.BTN_PRIMARY_HOVER,
+            relief="flat",
+            cursor="hand2",
+            bd=0,
+            highlightthickness=0,
+            padx=24,
+            pady=6
+        )
+        self.save_button.grid(row=settings_row, column=0, columnspan=2, pady=(8, 16))
+        self._add_button_hover(self.save_button, Theme.BTN_PRIMARY_BG, Theme.BTN_PRIMARY_HOVER)
+
+        # ─────────────────────────────────────────────────────────────────────
+        # STATISTICS - Minimal footer
+        # ─────────────────────────────────────────────────────────────────────
+
+        self.stats_frame = tk.Frame(self.master, bg=Theme.BG_DEEP)
+        self.stats_frame.grid(row=7, column=0, pady=(0, 20))
 
         self.stats_label = tk.Label(
             self.stats_frame,
             text="",
-            font=("Helvetica", 10),
-            fg="gray"
+            font=("SF Pro Display", 10),
+            fg=Theme.TEXT_MUTED,
+            bg=Theme.BG_DEEP
         )
         self.stats_label.pack()
 
-        self.set_color("white")
+    def _add_button_hover(self, button: tk.Button, bg_normal: str, bg_hover: str,
+                          fg_normal: str = None, fg_hover: str = None) -> None:
+        """Add hover effects to buttons."""
+        def on_enter(e):
+            button.config(bg=bg_hover)
+            if fg_hover:
+                button.config(fg=fg_hover)
+
+        def on_leave(e):
+            button.config(bg=bg_normal)
+            if fg_normal:
+                button.config(fg=fg_normal)
+
+        button.bind("<Enter>", on_enter)
+        button.bind("<Leave>", on_leave)
+
+    def _create_setting_row(self, parent: tk.Frame, row: int, label_text: str,
+                            entry: tk.Entry) -> None:
+        """Create a settings row with label and entry."""
+        label = tk.Label(
+            parent,
+            text=label_text,
+            font=("SF Pro Display", 11),
+            fg=Theme.TEXT_SECONDARY,
+            bg=Theme.BG_SURFACE
+        )
+        label.grid(row=row, column=0, padx=(16, 12), pady=8, sticky="e")
+        entry.grid(row=row, column=1, padx=(0, 16), pady=8, sticky="w")
+
+    def _create_entry(self, attr_name: str, default_value: int) -> tk.Entry:
+        """Create a styled entry widget."""
+        entry = tk.Entry(
+            self.settings_frame,
+            font=("SF Mono", 11),
+            fg=Theme.TEXT_PRIMARY,
+            bg=Theme.BG_ELEVATED,
+            insertbackground=Theme.TEXT_PRIMARY,
+            relief="flat",
+            width=6,
+            highlightthickness=1,
+            highlightbackground=Theme.BORDER_DEFAULT,
+            highlightcolor=Theme.WORK_PRIMARY
+        )
+        entry.insert(0, str(default_value))
+        entry.bind("<FocusIn>", self.select_all_text)
+        entry.bind("<FocusOut>", self.update_times)
+        setattr(self, attr_name, entry)
+        return entry
 
     def _create_progress_dots(self) -> None:
-        """Create progress indicator dots."""
-        # Clear existing dots
+        """Create elegant progress indicator dots."""
         for dot in self.progress_dots:
             dot.destroy()
         self.progress_dots.clear()
 
-        # Create new dots
         for i in range(self.pomodoros_until_long_break):
             dot = tk.Label(
                 self.progress_frame,
-                text="○",
-                font=("Helvetica", 16),
-                fg="gray"
+                text="●",
+                font=("SF Pro Display", 12),
+                fg=Theme.TEXT_MUTED,
+                bg=Theme.BG_DEEP
             )
-            dot.grid(row=0, column=i, padx=3)
+            dot.grid(row=0, column=i, padx=6)
             self.progress_dots.append(dot)
 
     def _update_progress_dots(self) -> None:
-        """Update progress dots to reflect completed pomodoros."""
+        """Update progress dots with elegant colors."""
         completed = self.pomodoro_count % self.pomodoros_until_long_break
         for i, dot in enumerate(self.progress_dots):
             if i < completed:
-                dot.config(text="●", fg="tomato")
+                dot.config(fg=Theme.SUCCESS)
             else:
-                dot.config(text="○", fg="gray")
+                dot.config(fg=Theme.TEXT_MUTED)
+
+    def _apply_idle_state(self) -> None:
+        """Apply idle/stopped visual state - minimal and clean."""
+        self.label.config(text="FOCUS", fg=Theme.TEXT_MUTED)
+        self.time_label.config(fg=Theme.TEXT_PRIMARY)
+        self.message_label.config(text="")
+        self.master.configure(bg=Theme.BG_DEEP)
+        self._update_all_backgrounds(Theme.BG_DEEP)
+
+    def _apply_work_state(self) -> None:
+        """Apply work mode visual state - focused and calm."""
+        self.label.config(text="FOCUS", fg=Theme.WORK_PRIMARY)
+        self.time_label.config(fg=Theme.WORK_PRIMARY)
+        self.message_label.config(text="")
+        self.master.configure(bg=Theme.BG_DEEP)
+        self._update_all_backgrounds(Theme.BG_DEEP)
+
+    def _apply_warning_state(self) -> None:
+        """Apply warning state - subtle alert."""
+        self.label.config(text="FINISHING", fg=Theme.WARNING_PRIMARY)
+        self.time_label.config(fg=Theme.WARNING_PRIMARY)
+
+    def _apply_break_state(self) -> None:
+        """Apply break mode - refreshing and decorative."""
+        self.current_message = random.choice(BREAK_MESSAGES)
+        self.label.config(text="BREAK", fg=Theme.BREAK_PRIMARY)
+        self.time_label.config(fg=Theme.BREAK_PRIMARY)
+        self.message_label.config(text=self.current_message, fg=Theme.BREAK_PRIMARY)
+
+    def _apply_long_break_state(self) -> None:
+        """Apply long break mode - relaxing and celebratory."""
+        self.current_message = random.choice(LONG_BREAK_MESSAGES)
+        self.label.config(text="LONG BREAK", fg=Theme.LONG_BREAK_PRIMARY)
+        self.time_label.config(fg=Theme.LONG_BREAK_PRIMARY)
+        self.message_label.config(text=self.current_message, fg=Theme.LONG_BREAK_PRIMARY)
+
+    def _update_all_backgrounds(self, color: str) -> None:
+        """Update all widget backgrounds for theme consistency."""
+        widgets_with_bg = [
+            self.label, self.timer_frame, self.time_label, self.message_label,
+            self.progress_frame, self.button_frame, self.secondary_frame,
+            self.stats_frame, self.stats_label, self.skip_button, self.toggle_button
+        ]
+        for widget in widgets_with_bg:
+            try:
+                widget.config(bg=color)
+            except tk.TclError:
+                pass
+
+        for dot in self.progress_dots:
+            dot.config(bg=color)
 
     def _get_counter_text(self) -> str:
-        """Get the text for the pomodoro counter."""
-        return f"Session: {self.total_session_pomodoros} | Cycle: {self.pomodoro_count % self.pomodoros_until_long_break}/{self.pomodoros_until_long_break}"
+        """Get minimal counter text."""
+        cycle_pos = self.pomodoro_count % self.pomodoros_until_long_break
+        return f"Session {self.total_session_pomodoros}  •  Cycle {cycle_pos}/{self.pomodoros_until_long_break}"
 
     def update_stats_display(self) -> None:
-        """Update the statistics display."""
+        """Update the statistics display with elegant formatting."""
         today = get_today_stats()
         total = get_total_stats()
-        self.stats_label.config(
-            text=f"Today: {today['pomodoros']} pomodoros ({today['minutes']} min) | "
-                 f"All time: {total['total_pomodoros']} | Streak: {total['streak_days']} days"
-        )
-        self.counter_label.config(text=self._get_counter_text())
+
+        # Minimal stats format
+        parts = []
+        if today['pomodoros'] > 0:
+            parts.append(f"Today: {today['pomodoros']}")
+        if total['streak_days'] > 0:
+            parts.append(f"Streak: {total['streak_days']}d")
+        parts.append(f"Total: {total['total_pomodoros']}")
+
+        self.stats_label.config(text="  •  ".join(parts))
         self._update_progress_dots()
 
     def _update_auto_settings(self) -> None:
@@ -291,19 +585,14 @@ class PomodoroTimer:
         """Select all text inside the given entry widget."""
         event.widget.select_range(0, "end")
 
-    def set_color(self, color: str) -> None:
-        """Set the foreground color for timer labels."""
-        self.label.config(fg=color)
-        self.time_label.config(fg=color)
-
     def toggle_settings(self) -> None:
-        """Show or hide the settings frame."""
+        """Show or hide the settings panel."""
         if self.settings_visible:
             self.settings_frame.grid_remove()
-            self.toggle_button.config(text="Show Settings")
+            self.toggle_button.config(text="Settings")
         else:
             self.settings_frame.grid()
-            self.toggle_button.config(text="Hide Settings")
+            self.toggle_button.config(text="Hide")
         self.settings_visible = not self.settings_visible
 
     def save_current_settings(self) -> None:
@@ -317,15 +606,16 @@ class PomodoroTimer:
             "auto_start_work": self.auto_start_work,
         })
         if save_settings(self.settings):
-            messagebox.showinfo("Settings", "Settings saved successfully!")
+            # Subtle confirmation - change button text temporarily
+            self.save_button.config(text="Saved ✓")
+            self.master.after(1500, lambda: self.save_button.config(text="Save"))
             logger.info("Settings saved")
         else:
             messagebox.showerror("Error", "Could not save settings")
             logger.error("Failed to save settings")
 
     def update_times(self, event: tk.Event | None = None) -> None:
-        """Update the work and break times from the entry fields with validation."""
-        # Prevent changes while timer is running
+        """Update the work and break times from the entry fields."""
         if self.timer_running or self.paused:
             return
 
@@ -335,30 +625,27 @@ class PomodoroTimer:
             long_break_minutes = int(self.long_break_entry.get())
             pomo_count = int(self.pomo_count_entry.get())
 
-            # Validate work time
-            if work_minutes <= 0 or work_minutes > 1440:
-                messagebox.showerror("Invalid Input", "Work time must be between 1 and 1440 minutes")
+            # Validation
+            if not (1 <= work_minutes <= 1440):
+                self._show_validation_error("Work time: 1-1440 min")
                 self.work_time_entry.delete(0, tk.END)
                 self.work_time_entry.insert(0, str(self.work_time // 60))
                 return
 
-            # Validate break time
-            if break_minutes <= 0 or break_minutes > 1440:
-                messagebox.showerror("Invalid Input", "Break time must be between 1 and 1440 minutes")
+            if not (1 <= break_minutes <= 1440):
+                self._show_validation_error("Break time: 1-1440 min")
                 self.break_time_entry.delete(0, tk.END)
                 self.break_time_entry.insert(0, str(self.break_time // 60))
                 return
 
-            # Validate long break time
-            if long_break_minutes <= 0 or long_break_minutes > 1440:
-                messagebox.showerror("Invalid Input", "Long break time must be between 1 and 1440 minutes")
+            if not (1 <= long_break_minutes <= 1440):
+                self._show_validation_error("Long break: 1-1440 min")
                 self.long_break_entry.delete(0, tk.END)
                 self.long_break_entry.insert(0, str(self.long_break_time // 60))
                 return
 
-            # Validate pomodoro count
-            if pomo_count <= 0 or pomo_count > 10:
-                messagebox.showerror("Invalid Input", "Pomodoros for long break must be between 1 and 10")
+            if not (1 <= pomo_count <= 10):
+                self._show_validation_error("Sessions: 1-10")
                 self.pomo_count_entry.delete(0, tk.END)
                 self.pomo_count_entry.insert(0, str(self.pomodoros_until_long_break))
                 return
@@ -368,19 +655,25 @@ class PomodoroTimer:
             self.long_break_time = long_break_minutes * 60
             self.pomodoros_until_long_break = pomo_count
 
-            # Recreate progress dots if count changed
             self._create_progress_dots()
             self._update_progress_dots()
-
             self.reset_timer()
+
             logger.info(
                 "Settings updated: work=%d, break=%d, long_break=%d, pomo_count=%d",
                 work_minutes, break_minutes, long_break_minutes, pomo_count
             )
         except ValueError:
-            messagebox.showerror("Invalid Input", "Please enter valid numbers")
-            # Reset to current values
+            self._show_validation_error("Enter valid numbers")
             self._reset_entry_values()
+
+    def _show_validation_error(self, message: str) -> None:
+        """Show subtle validation error."""
+        original_text = self.message_label.cget("text")
+        original_fg = self.message_label.cget("fg")
+
+        self.message_label.config(text=message, fg=Theme.WARNING_PRIMARY)
+        self.master.after(2000, lambda: self.message_label.config(text=original_text, fg=original_fg))
 
     def _reset_entry_values(self) -> None:
         """Reset entry fields to current values."""
@@ -394,25 +687,23 @@ class PomodoroTimer:
         self.pomo_count_entry.insert(0, str(self.pomodoros_until_long_break))
 
     def format_time(self, seconds: int) -> str:
-        """Format seconds as ``MM:SS``."""
+        """Format seconds as MM:SS."""
         minutes = seconds // 60
         secs = seconds % 60
         return f"{minutes:02}:{secs:02}"
 
     def update_timer(self) -> None:
-        """Update the countdown timer and switch modes when needed."""
+        """Update the countdown timer."""
         if self.timer_running:
             if self.time_left > 0:
                 self.time_left -= 1
 
-                # Update color based on state and time remaining
+                # Update visual state based on mode
                 if self.is_working:
                     if self.time_left <= WARNING_THRESHOLD * self.work_time:
-                        self.set_color("red")
+                        self._apply_warning_state()
                     else:
-                        self.set_color("blue")
-                else:
-                    self.set_color("green")
+                        self._apply_work_state()
 
                 self.time_label.config(text=self.format_time(self.time_left))
                 self.master.after(1000, self.update_timer)
@@ -433,21 +724,16 @@ class PomodoroTimer:
 
             # Determine break type
             if self.pomodoro_count % self.pomodoros_until_long_break == 0:
-                # Long break
                 self.time_left = self.long_break_time
-                self.label.config(text="Long Break!")
-                self.set_color("purple")
+                self._apply_long_break_state()
                 logger.info("Starting long break")
             else:
-                # Short break
                 self.time_left = self.break_time
-                self.label.config(text="Break Time")
-                self.set_color("green")
+                self._apply_break_state()
                 logger.info("Starting short break")
 
             self.update_stats_display()
 
-            # Auto-start or wait
             if self.auto_start_breaks:
                 self.is_working = False
                 self.update_timer()
@@ -455,15 +741,12 @@ class PomodoroTimer:
                 self.timer_running = False
                 self.is_working = False
                 self.pause_button.config(text="Pause")
-                messagebox.showinfo("Break Time!", "Time for a break! Click Start when ready.")
         else:
-            # Completed a break session
+            # Completed a break
             self.time_left = self.work_time
-            self.label.config(text="Work Time")
-            self.set_color("blue")
-            logger.info("Break completed, ready for work")
+            self._apply_work_state()
+            logger.info("Break completed")
 
-            # Auto-start or wait
             if self.auto_start_work:
                 self.is_working = True
                 self.update_timer()
@@ -471,33 +754,27 @@ class PomodoroTimer:
                 self.timer_running = False
                 self.is_working = True
                 self.pause_button.config(text="Pause")
-                messagebox.showinfo("Work Time!", "Break is over! Click Start when ready.")
+                self._apply_idle_state()
 
     def skip_phase(self) -> None:
         """Skip to the next timer phase."""
         if not self.timer_running and not self.paused:
             return
 
-        # Stop current timer
         self.timer_running = False
         self.paused = False
 
         if self.is_working:
-            # Skip work session - don't count it as completed
             if self.pomodoro_count % self.pomodoros_until_long_break == self.pomodoros_until_long_break - 1:
                 self.time_left = self.long_break_time
-                self.label.config(text="Long Break!")
-                self.set_color("purple")
+                self._apply_long_break_state()
             else:
                 self.time_left = self.break_time
-                self.label.config(text="Break Time")
-                self.set_color("green")
+                self._apply_break_state()
             self.is_working = False
         else:
-            # Skip break
             self.time_left = self.work_time
-            self.label.config(text="Work Time")
-            self.set_color("blue")
+            self._apply_idle_state()
             self.is_working = True
 
         self.time_label.config(text=self.format_time(self.time_left))
@@ -511,13 +788,24 @@ class PomodoroTimer:
                 play_sound()
             else:
                 self.paused = False
+
             self.timer_running = True
             self.pause_button.config(text="Pause")
+
+            # Apply appropriate visual state
+            if self.is_working:
+                self._apply_work_state()
+            else:
+                if self.time_left == self.long_break_time:
+                    self._apply_long_break_state()
+                else:
+                    self._apply_break_state()
+
             logger.info("Timer started (is_working=%s)", self.is_working)
             self.update_timer()
 
     def pause_timer(self) -> None:
-        """Pause the running timer or resume if already paused."""
+        """Pause or resume the timer."""
         if self.timer_running:
             self.timer_running = False
             self.paused = True
@@ -527,13 +815,12 @@ class PomodoroTimer:
             self.start_timer()
 
     def reset_timer(self) -> None:
-        """Stop the timer and reset to the initial work period."""
+        """Stop and reset the timer."""
         self.timer_running = False
         self.paused = False
         self.is_working = True
         self.time_left = self.work_time
-        self.label.config(text="Work Time")
-        self.set_color("white")
+        self._apply_idle_state()
         self.time_label.config(text=self.format_time(self.time_left))
         self._reset_entry_values()
         self.pause_button.config(text="Pause")
