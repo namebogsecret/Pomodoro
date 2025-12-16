@@ -6,7 +6,13 @@ from __future__ import annotations
 
 from pathlib import Path
 import sys
-import pygame
+
+try:
+    import pygame
+    PYGAME_AVAILABLE = True
+except ImportError:
+    pygame = None
+    PYGAME_AVAILABLE = False
 
 from .generate_beep import generate_beep
 from .get_beep_filename import get_beep_filename
@@ -15,6 +21,8 @@ from ..config import BEEP_FREQUENCY, BEEP_DURATION, BEEP_VOLUME
 
 def _ensure_mixer_initialized() -> None:
     """Initialize the pygame mixer if it is not already."""
+    if not PYGAME_AVAILABLE:
+        return
     if not pygame.mixer.get_init():
         pygame.mixer.init()
 
@@ -26,7 +34,11 @@ def play_sound() -> None:
     function works on Windows, macOS and Linux.
 
     Errors are logged to stderr but do not crash the application.
+    If pygame is not available, sound playback is silently skipped.
     """
+    if not PYGAME_AVAILABLE:
+        return
+
     try:
         _ensure_mixer_initialized()
 
