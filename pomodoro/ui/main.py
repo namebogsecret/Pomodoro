@@ -6,6 +6,9 @@ import tkinter as tk
 from tkinter import messagebox
 import logging
 import random
+import math
+import subprocess
+import platform
 
 from ..utils.sound import play_sound
 from ..utils.settings import load_settings, save_settings, DEFAULT_SETTINGS
@@ -88,6 +91,136 @@ LONG_BREAK_MESSAGES = [
     "Take a walk",
     "Refresh your mind",
 ]
+
+# Motivational quotes for focus sessions
+FOCUS_QUOTES = [
+    "Deep work, deep results",
+    "One step at a time",
+    "Flow state activated",
+    "Focus is your superpower",
+    "Small progress is progress",
+    "You've got this",
+    "Make it count",
+    "Stay in the zone",
+    "Embrace the grind",
+    "Clarity through focus",
+    "Build momentum",
+    "Execute with precision",
+]
+
+# Celebration messages when completing pomodoro
+COMPLETION_MESSAGES = [
+    "Excellent work!",
+    "Pomodoro complete!",
+    "Great focus session!",
+    "Well done!",
+    "Keep crushing it!",
+    "Amazing progress!",
+]
+
+
+class CircularProgress(tk.Canvas):
+    """Circular progress bar with glow effect."""
+
+    def __init__(self, parent, size=220, line_width=8, bg_color=Theme.BG_PRIMARY,
+                 track_color=Theme.BORDER_SUBTLE, progress_color=Theme.FOCUS_PRIMARY,
+                 glow_color=None, **kwargs):
+        super().__init__(parent, width=size, height=size, bg=bg_color,
+                        highlightthickness=0, **kwargs)
+
+        self.size = size
+        self.line_width = line_width
+        self.track_color = track_color
+        self.progress_color = progress_color
+        self.glow_color = glow_color or progress_color
+        self.progress = 1.0  # 0.0 to 1.0
+        self.pulse_scale = 1.0
+        self.glow_intensity = 0
+
+        self._draw()
+
+    def _draw(self):
+        """Draw the circular progress bar with glow."""
+        self.delete("all")
+
+        center = self.size / 2
+        radius = (self.size - self.line_width * 2 - 20) / 2  # Leave room for glow
+
+        # Apply pulse scale
+        radius *= self.pulse_scale
+
+        # Draw glow layers (multiple arcs with decreasing opacity simulation)
+        if self.glow_intensity > 0:
+            for i in range(3):
+                glow_radius = radius + (i + 1) * 4
+                glow_width = self.line_width + (3 - i) * 2
+                # Simulate glow with lighter color
+                self.create_arc(
+                    center - glow_radius, center - glow_radius,
+                    center + glow_radius, center + glow_radius,
+                    start=90, extent=-360 * self.progress,
+                    style="arc", outline=self._blend_color(self.glow_color, Theme.BG_PRIMARY, 0.3 + i * 0.2),
+                    width=glow_width
+                )
+
+        # Draw track (background circle)
+        self.create_arc(
+            center - radius, center - radius,
+            center + radius, center + radius,
+            start=0, extent=360,
+            style="arc", outline=self.track_color,
+            width=self.line_width
+        )
+
+        # Draw progress arc (clockwise from top)
+        if self.progress > 0:
+            extent = -360 * self.progress  # Negative for clockwise
+            self.create_arc(
+                center - radius, center - radius,
+                center + radius, center + radius,
+                start=90, extent=extent,
+                style="arc", outline=self.progress_color,
+                width=self.line_width
+            )
+
+    def _blend_color(self, color1, color2, ratio):
+        """Blend two hex colors."""
+        def hex_to_rgb(hex_color):
+            hex_color = hex_color.lstrip('#')
+            return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
+        def rgb_to_hex(rgb):
+            return '#{:02x}{:02x}{:02x}'.format(*rgb)
+
+        r1, g1, b1 = hex_to_rgb(color1)
+        r2, g2, b2 = hex_to_rgb(color2)
+
+        r = int(r1 * (1 - ratio) + r2 * ratio)
+        g = int(g1 * (1 - ratio) + g2 * ratio)
+        b = int(b1 * (1 - ratio) + b2 * ratio)
+
+        return rgb_to_hex((r, g, b))
+
+    def set_progress(self, value):
+        """Set progress value (0.0 to 1.0)."""
+        self.progress = max(0.0, min(1.0, value))
+        self._draw()
+
+    def set_color(self, color):
+        """Set progress bar color."""
+        self.progress_color = color
+        self.glow_color = color
+        self._draw()
+
+    def set_pulse(self, scale):
+        """Set pulse scale for animation."""
+        self.pulse_scale = scale
+        self._draw()
+
+    def set_glow(self, intensity):
+        """Set glow intensity (0.0 to 1.0)."""
+        self.glow_intensity = intensity
+        self._draw()
 
 
 class RoundedButton(tk.Canvas):
@@ -227,7 +360,17 @@ class PomodoroTimer:
 
         self.current_message = ""
 
+        # Animation state
+        self.pulse_active = False
+        self.pulse_direction = 1
+        self.pulse_value = 1.0
+        self.glow_active = False
+
+        # Total time for progress calculation
+        self.total_time = self.work_time
+
         self._create_ui()
+        self._bind_keyboard_shortcuts()
         self.settings_frame.grid_remove()
         self.update_stats_display()
 
@@ -252,20 +395,32 @@ class PomodoroTimer:
         self.mode_label.grid(row=0, column=0, pady=(28, 0))
 
         # ───────────────────────────────────────────────────────────────────
-        # TIMER DISPLAY (large, elegant)
+        # TIMER DISPLAY with CIRCULAR PROGRESS
         # ───────────────────────────────────────────────────────────────────
 
         self.timer_frame = tk.Frame(self.master, bg=Theme.BG_PRIMARY)
         self.timer_frame.grid(row=1, column=0, pady=(4, 0))
 
+        # Circular progress bar
+        self.progress_ring = CircularProgress(
+            self.timer_frame,
+            size=220,
+            line_width=6,
+            bg_color=Theme.BG_PRIMARY,
+            track_color=Theme.BORDER_SUBTLE,
+            progress_color=Theme.TEXT_MUTED
+        )
+        self.progress_ring.pack()
+
+        # Time label overlaid on progress ring
         self.time_label = tk.Label(
             self.timer_frame,
             text=self.format_time(self.time_left),
-            font=("Helvetica Neue", 64, "bold"),
+            font=("Helvetica Neue", 48, "bold"),
             fg=Theme.TEXT_PRIMARY,
             bg=Theme.BG_PRIMARY
         )
-        self.time_label.pack()
+        self.time_label.place(relx=0.5, rely=0.5, anchor="center")
 
         # ───────────────────────────────────────────────────────────────────
         # MESSAGE (shown during breaks)
@@ -455,7 +610,17 @@ class PomodoroTimer:
             fg=Theme.TEXT_MUTED,
             bg=Theme.BG_PRIMARY
         )
-        self.stats_label.grid(row=7, column=0, pady=(0, 20))
+        self.stats_label.grid(row=7, column=0, pady=(0, 8))
+
+        # Keyboard shortcuts hint
+        self.shortcuts_label = tk.Label(
+            self.master,
+            text="Space: start/pause  ·  R: reset  ·  S: skip",
+            font=("Helvetica Neue", 9),
+            fg=Theme.TEXT_DISABLED,
+            bg=Theme.BG_PRIMARY
+        )
+        self.shortcuts_label.grid(row=8, column=0, pady=(0, 16))
 
     def _create_setting_row(self, parent, row, label_text, value):
         """Create a settings row."""
@@ -513,41 +678,173 @@ class PomodoroTimer:
             color = Theme.BREAK_PRIMARY if i < completed else Theme.TEXT_DISABLED
             dot.create_oval(1, 1, 9, 9, fill=color, outline="")
 
+    def _bind_keyboard_shortcuts(self) -> None:
+        """Bind keyboard shortcuts for quick control."""
+        self.master.bind("<space>", self._on_space)
+        self.master.bind("<r>", lambda e: self._safe_reset())
+        self.master.bind("<R>", lambda e: self._safe_reset())
+        self.master.bind("<s>", lambda e: self.skip_phase())
+        self.master.bind("<S>", lambda e: self.skip_phase())
+        self.master.bind("<Escape>", self._on_escape)
+        logger.info("Keyboard shortcuts bound: Space=start/pause, R=reset, S=skip, Esc=close settings")
+
+    def _on_space(self, event) -> None:
+        """Handle space key - start/pause toggle."""
+        # Don't trigger if focus is on an entry widget
+        if isinstance(event.widget, tk.Entry):
+            return
+        if self.timer_running:
+            self.pause_timer()
+        else:
+            self.start_timer()
+
+    def _on_escape(self, event) -> None:
+        """Handle escape key - close settings."""
+        if self.settings_visible:
+            self.toggle_settings()
+
+    def _safe_reset(self) -> None:
+        """Reset only if not typing in entry."""
+        if not any(w.focus_get() == w for w in [
+            self.work_time_entry, self.break_time_entry,
+            self.long_break_entry, self.pomo_count_entry
+        ]):
+            self.reset_timer()
+
+    def _animate_pulse(self) -> None:
+        """Animate pulsing effect for last 10 seconds."""
+        if not self.pulse_active:
+            return
+
+        # Smooth sine wave pulse
+        self.pulse_value += 0.08 * self.pulse_direction
+        if self.pulse_value >= 1.08:
+            self.pulse_direction = -1
+        elif self.pulse_value <= 0.95:
+            self.pulse_direction = 1
+
+        self.progress_ring.set_pulse(self.pulse_value)
+        self.master.after(50, self._animate_pulse)
+
+    def _start_pulse(self) -> None:
+        """Start pulse animation."""
+        if not self.pulse_active:
+            self.pulse_active = True
+            self.progress_ring.set_glow(1.0)
+            self._animate_pulse()
+
+    def _stop_pulse(self) -> None:
+        """Stop pulse animation."""
+        self.pulse_active = False
+        self.pulse_value = 1.0
+        self.pulse_direction = 1
+        self.progress_ring.set_pulse(1.0)
+        self.progress_ring.set_glow(0)
+
+    def _send_notification(self, title: str, message: str) -> None:
+        """Send desktop notification."""
+        try:
+            system = platform.system()
+            if system == "Linux":
+                subprocess.Popen(
+                    ["notify-send", "-a", "Pomodoro Timer", title, message],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+            elif system == "Darwin":  # macOS
+                script = f'display notification "{message}" with title "{title}"'
+                subprocess.Popen(
+                    ["osascript", "-e", script],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+            elif system == "Windows":
+                # Windows 10+ toast notification via PowerShell
+                ps_script = f'''
+                [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+                $template = [Windows.UI.Notifications.ToastTemplateType]::ToastText02
+                $xml = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent($template)
+                $text = $xml.GetElementsByTagName("text")
+                $text[0].AppendChild($xml.CreateTextNode("{title}")) | Out-Null
+                $text[1].AppendChild($xml.CreateTextNode("{message}")) | Out-Null
+                $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
+                [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Pomodoro Timer").Show($toast)
+                '''
+                subprocess.Popen(
+                    ["powershell", "-Command", ps_script],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
+                )
+            logger.debug(f"Notification sent: {title}")
+        except Exception as e:
+            logger.warning(f"Could not send notification: {e}")
+
+    def _update_progress_ring(self) -> None:
+        """Update circular progress bar."""
+        if self.total_time > 0:
+            progress = self.time_left / self.total_time
+            self.progress_ring.set_progress(progress)
+            self.progress_ring.set_color(self.current_accent)
+
     def _apply_idle_state(self) -> None:
         """Apply idle visual state."""
+        self._stop_pulse()
         self.mode_label.config(text="FOCUS", fg=Theme.TEXT_MUTED)
         self.time_label.config(fg=Theme.TEXT_PRIMARY)
         self.message_label.config(text="")
-        self.current_accent = Theme.TEXT_PRIMARY
+        self.current_accent = Theme.TEXT_MUTED
+        self.total_time = self.work_time
+        self.progress_ring.set_progress(1.0)
+        self.progress_ring.set_color(Theme.TEXT_MUTED)
 
     def _apply_work_state(self) -> None:
         """Apply work mode visual state."""
         self.mode_label.config(text="FOCUS", fg=Theme.FOCUS_PRIMARY)
         self.time_label.config(fg=Theme.FOCUS_PRIMARY)
-        self.message_label.config(text="")
+        # Show motivational quote when starting
+        if self.time_left == self.work_time:
+            quote = random.choice(FOCUS_QUOTES)
+            self.message_label.config(text=quote, fg=Theme.TEXT_MUTED)
+            # Fade out quote after 3 seconds
+            self.master.after(3000, lambda: self.message_label.config(text="") if self.is_working else None)
+        else:
+            self.message_label.config(text="")
         self.current_accent = Theme.FOCUS_PRIMARY
+        self.total_time = self.work_time
+        self._update_progress_ring()
 
     def _apply_warning_state(self) -> None:
-        """Apply warning state."""
+        """Apply warning state with pulse."""
         self.mode_label.config(text="FINISHING", fg=Theme.WARNING_PRIMARY)
         self.time_label.config(fg=Theme.WARNING_PRIMARY)
         self.current_accent = Theme.WARNING_PRIMARY
+        self._update_progress_ring()
+        # Start pulse in last 10 seconds
+        if self.time_left <= 10:
+            self._start_pulse()
 
     def _apply_break_state(self) -> None:
         """Apply break mode."""
+        self._stop_pulse()
         self.current_message = random.choice(BREAK_MESSAGES)
         self.mode_label.config(text="BREAK", fg=Theme.BREAK_PRIMARY)
         self.time_label.config(fg=Theme.BREAK_PRIMARY)
         self.message_label.config(text=self.current_message, fg=Theme.BREAK_PRIMARY)
         self.current_accent = Theme.BREAK_PRIMARY
+        self.total_time = self.break_time
+        self._update_progress_ring()
 
     def _apply_long_break_state(self) -> None:
         """Apply long break mode."""
+        self._stop_pulse()
         self.current_message = random.choice(LONG_BREAK_MESSAGES)
         self.mode_label.config(text="LONG BREAK", fg=Theme.LONG_BREAK_PRIMARY)
         self.time_label.config(fg=Theme.LONG_BREAK_PRIMARY)
         self.message_label.config(text=self.current_message, fg=Theme.LONG_BREAK_PRIMARY)
         self.current_accent = Theme.LONG_BREAK_PRIMARY
+        self.total_time = self.long_break_time
+        self._update_progress_ring()
 
     def update_stats_display(self) -> None:
         """Update statistics display."""
@@ -676,6 +973,9 @@ class PomodoroTimer:
                         self._apply_warning_state()
                     else:
                         self._apply_work_state()
+                else:
+                    # Update progress for break modes
+                    self._update_progress_ring()
 
                 self.time_label.config(text=self.format_time(self.time_left))
                 self.master.after(1000, self.update_timer)
@@ -684,6 +984,7 @@ class PomodoroTimer:
 
     def _handle_timer_complete(self) -> None:
         """Handle timer completion."""
+        self._stop_pulse()
         play_sound()
 
         if self.is_working:
@@ -692,12 +993,16 @@ class PomodoroTimer:
             record_pomodoro(self.work_time // 60)
             logger.info("Pomodoro completed: %d", self.pomodoro_count)
 
+            # Send notification
+            completion_msg = random.choice(COMPLETION_MESSAGES)
             if self.pomodoro_count % self.pomodoros_until_long_break == 0:
                 self.time_left = self.long_break_time
                 self._apply_long_break_state()
+                self._send_notification("🎉 " + completion_msg, "Time for a long break! You've earned it.")
             else:
                 self.time_left = self.break_time
                 self._apply_break_state()
+                self._send_notification("✅ " + completion_msg, f"Take a {self.break_time // 60} minute break.")
 
             self.update_stats_display()
 
@@ -710,10 +1015,11 @@ class PomodoroTimer:
                 self.pause_button.set_text("Pause")
         else:
             self.time_left = self.work_time
-            self._apply_work_state()
+            self._send_notification("⏰ Break over!", "Ready to focus again?")
 
             if self.auto_start_work:
                 self.is_working = True
+                self._apply_work_state()
                 self.update_timer()
             else:
                 self.timer_running = False
