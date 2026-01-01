@@ -26,6 +26,7 @@ DEFAULT_SETTINGS = {
     "auto_start_breaks": True,
     "auto_start_work": False,
     "warning_threshold": 0.1,  # 10% of time remaining triggers red warning
+    "language": None,  # None = auto-detect from system, or "en", "ru"
 }
 
 

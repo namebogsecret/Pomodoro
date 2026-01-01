@@ -1,0 +1,96 @@
+{
+  "app": {
+    "name": "Pomodoro Timer",
+    "description": "A productivity timer using the Pomodoro Technique"
+  },
+  "modes": {
+    "focus": "FOCUS",
+    "break": "BREAK",
+    "long_break": "LONG BREAK",
+    "finishing": "FINISHING"
+  },
+  "buttons": {
+    "start": "Start",
+    "pause": "Pause",
+    "resume": "Resume",
+    "reset": "Reset",
+    "skip": "Skip",
+    "settings": "Settings",
+    "save": "Save",
+    "saved": "Saved"
+  },
+  "settings": {
+    "work": "Work",
+    "break": "Break",
+    "long_break": "Long break",
+    "sessions": "Sessions",
+    "auto_breaks": "Auto breaks",
+    "auto_work": "Auto work",
+    "language": "Language"
+  },
+  "validation": {
+    "work_range": "Work: 1-1440",
+    "break_range": "Break: 1-1440",
+    "long_break_range": "Long break: 1-1440",
+    "sessions_range": "Sessions: 1-10",
+    "invalid_number": "Invalid number"
+  },
+  "stats": {
+    "today": "Today: {count}",
+    "total": "Total: {count}"
+  },
+  "shortcuts": {
+    "hint": "Space: start/pause  ·  R: reset  ·  S: skip"
+  },
+  "notifications": {
+    "long_break_title": "Time for a long break! You've earned it.",
+    "break_title": "Take a {minutes} minute break.",
+    "break_over_title": "Break over!",
+    "break_over_message": "Ready to focus again?"
+  },
+  "errors": {
+    "save_settings": "Could not save settings"
+  },
+  "messages": {
+    "break": [
+      "Rest your eyes",
+      "Deep breath",
+      "Stretch a little",
+      "Look away",
+      "Stay hydrated",
+      "Relax"
+    ],
+    "long_break": [
+      "Great progress",
+      "Well deserved",
+      "Take a walk",
+      "Refresh your mind"
+    ],
+    "focus_quotes": [
+      "Deep work, deep results",
+      "One step at a time",
+      "Flow state activated",
+      "Focus is your superpower",
+      "Small progress is progress",
+      "You've got this",
+      "Make it count",
+      "Stay in the zone",
+      "Embrace the grind",
+      "Clarity through focus",
+      "Build momentum",
+      "Execute with precision"
+    ],
+    "completion": [
+      "Excellent work!",
+      "Pomodoro complete!",
+      "Great focus session!",
+      "Well done!",
+      "Keep crushing it!",
+      "Amazing progress!"
+    ]
+  },
+  "cli": {
+    "debug_help": "Enable debug logging",
+    "no_log_file_help": "Disable logging to file"
+  }
+}

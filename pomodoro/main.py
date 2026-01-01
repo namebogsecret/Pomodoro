@@ -8,13 +8,19 @@ import tkinter as tk
 
 from pomodoro.ui.main import PomodoroTimer
 from pomodoro.utils.logging_config import setup_logging
+from pomodoro.utils.i18n import t, load_translations
+from pomodoro.utils.settings import load_settings
 from pomodoro.config import APP_NAME, APP_VERSION
 
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
+    # Load translations for CLI help text
+    settings = load_settings()
+    load_translations(settings.get("language", None))
+
     parser = argparse.ArgumentParser(
-        description=f"{APP_NAME} - A productivity timer using the Pomodoro Technique"
+        description=f"{t('app.name')} - {t('app.description')}"
     )
     parser.add_argument(
         "--version", "-v",
@@ -24,12 +30,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--debug",
         action="store_true",
-        help="Enable debug logging"
+        help=t("cli.debug_help")
     )
     parser.add_argument(
         "--no-log-file",
         action="store_true",
-        help="Disable logging to file"
+        help=t("cli.no_log_file_help")
     )
     return parser.parse_args()
 

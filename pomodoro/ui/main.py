@@ -13,6 +13,7 @@ import platform
 from ..utils.sound import play_sound
 from ..utils.settings import load_settings, save_settings, DEFAULT_SETTINGS
 from ..utils.statistics import record_pomodoro, get_today_stats, get_total_stats
+from ..utils.i18n import t, get_message_list, load_translations, get_current_language, set_language, SUPPORTED_LANGUAGES
 from ..config import (
     WORK_TIME_MIN,
     BREAK_TIME_MIN,
@@ -75,48 +76,8 @@ class Theme:
     BORDER_ACTIVE = "#60a5fa"     # Active/focus border
 
 
-# Motivational messages
-BREAK_MESSAGES = [
-    "Rest your eyes",
-    "Deep breath",
-    "Stretch a little",
-    "Look away",
-    "Stay hydrated",
-    "Relax",
-]
-
-LONG_BREAK_MESSAGES = [
-    "Great progress",
-    "Well deserved",
-    "Take a walk",
-    "Refresh your mind",
-]
-
-# Motivational quotes for focus sessions
-FOCUS_QUOTES = [
-    "Deep work, deep results",
-    "One step at a time",
-    "Flow state activated",
-    "Focus is your superpower",
-    "Small progress is progress",
-    "You've got this",
-    "Make it count",
-    "Stay in the zone",
-    "Embrace the grind",
-    "Clarity through focus",
-    "Build momentum",
-    "Execute with precision",
-]
-
-# Celebration messages when completing pomodoro
-COMPLETION_MESSAGES = [
-    "Excellent work!",
-    "Pomodoro complete!",
-    "Great focus session!",
-    "Well done!",
-    "Keep crushing it!",
-    "Amazing progress!",
-]
+# Message lists are now loaded from i18n translations
+# See pomodoro/locales/*.json for translations
 
 
 class CircularProgress(tk.Canvas):
@@ -329,12 +290,16 @@ class PomodoroTimer:
     def __init__(self, master: tk.Tk) -> None:
         """Initialize the timer."""
         self.master = master
-        self.master.title(APP_NAME)
         self.master.resizable(False, False)
         self.master.configure(bg=Theme.BG_PRIMARY)
 
         # Load settings
         self.settings = load_settings()
+
+        # Initialize i18n with saved language or auto-detect
+        saved_language = self.settings.get("language", None)
+        load_translations(saved_language)
+        self.master.title(t("app.name"))
 
         # Timer durations
         self.work_time = self.settings.get("work_time_minutes", WORK_TIME_MIN) * 60
@@ -386,7 +351,7 @@ class PomodoroTimer:
 
         self.mode_label = tk.Label(
             self.master,
-            text="FOCUS",
+            text=t("modes.focus"),
             font=("Helvetica Neue", 10, "bold"),
             fg=Theme.TEXT_MUTED,
             bg=Theme.BG_PRIMARY,
@@ -454,7 +419,7 @@ class PomodoroTimer:
         # Start button (primary - colored)
         self.start_button = RoundedButton(
             self.button_frame,
-            text="Start",
+            text=t("buttons.start"),
             command=self.start_timer,
             width=90,
             height=36,
@@ -470,7 +435,7 @@ class PomodoroTimer:
         # Pause button
         self.pause_button = RoundedButton(
             self.button_frame,
-            text="Pause",
+            text=t("buttons.pause"),
             command=self.pause_timer,
             width=90,
             height=36,
@@ -481,7 +446,7 @@ class PomodoroTimer:
         # Reset button
         self.reset_button = RoundedButton(
             self.button_frame,
-            text="Reset",
+            text=t("buttons.reset"),
             command=self.reset_timer,
             width=90,
             height=36,
@@ -498,7 +463,7 @@ class PomodoroTimer:
 
         self.skip_button = tk.Label(
             self.secondary_frame,
-            text="Skip",
+            text=t("buttons.skip"),
             font=("Helvetica Neue", 10),
             fg=Theme.TEXT_MUTED,
             bg=Theme.BG_PRIMARY,
@@ -511,7 +476,7 @@ class PomodoroTimer:
 
         self.settings_toggle = tk.Label(
             self.secondary_frame,
-            text="Settings",
+            text=t("buttons.settings"),
             font=("Helvetica Neue", 10),
             fg=Theme.TEXT_MUTED,
             bg=Theme.BG_PRIMARY,
@@ -538,13 +503,13 @@ class PomodoroTimer:
         settings_inner.pack(padx=16, pady=12)
 
         row = 0
-        self.work_time_entry = self._create_setting_row(settings_inner, row, "Work", self.work_time // 60)
+        self.work_time_entry = self._create_setting_row(settings_inner, row, t("settings.work"), self.work_time // 60)
         row += 1
-        self.break_time_entry = self._create_setting_row(settings_inner, row, "Break", self.break_time // 60)
+        self.break_time_entry = self._create_setting_row(settings_inner, row, t("settings.break"), self.break_time // 60)
         row += 1
-        self.long_break_entry = self._create_setting_row(settings_inner, row, "Long break", self.long_break_time // 60)
+        self.long_break_entry = self._create_setting_row(settings_inner, row, t("settings.long_break"), self.long_break_time // 60)
         row += 1
-        self.pomo_count_entry = self._create_setting_row(settings_inner, row, "Sessions", self.pomodoros_until_long_break)
+        self.pomo_count_entry = self._create_setting_row(settings_inner, row, t("settings.sessions"), self.pomodoros_until_long_break)
         row += 1
 
         # Auto-start options
@@ -554,7 +519,7 @@ class PomodoroTimer:
         self.auto_break_var = tk.BooleanVar(value=self.auto_start_breaks)
         self.auto_break_check = tk.Checkbutton(
             auto_frame,
-            text="Auto breaks",
+            text=t("settings.auto_breaks"),
             variable=self.auto_break_var,
             font=("Helvetica Neue", 10),
             fg=Theme.TEXT_SECONDARY,
@@ -569,7 +534,7 @@ class PomodoroTimer:
         self.auto_work_var = tk.BooleanVar(value=self.auto_start_work)
         self.auto_work_check = tk.Checkbutton(
             auto_frame,
-            text="Auto work",
+            text=t("settings.auto_work"),
             variable=self.auto_work_var,
             font=("Helvetica Neue", 10),
             fg=Theme.TEXT_SECONDARY,
@@ -582,10 +547,49 @@ class PomodoroTimer:
         self.auto_work_check.pack(side="left")
         row += 1
 
+        # Language selection
+        lang_frame = tk.Frame(settings_inner, bg=Theme.BG_CARD)
+        lang_frame.grid(row=row, column=0, columnspan=2, pady=(8, 4), sticky="w")
+
+        lang_label = tk.Label(
+            lang_frame,
+            text=t("settings.language"),
+            font=("Helvetica Neue", 10),
+            fg=Theme.TEXT_SECONDARY,
+            bg=Theme.BG_CARD
+        )
+        lang_label.pack(side="left", padx=(0, 12))
+
+        self.language_var = tk.StringVar(value=get_current_language())
+        self.language_menu = tk.OptionMenu(
+            lang_frame,
+            self.language_var,
+            *SUPPORTED_LANGUAGES,
+            command=self._on_language_change
+        )
+        self.language_menu.config(
+            font=("Helvetica Neue", 10),
+            fg=Theme.TEXT_PRIMARY,
+            bg=Theme.BG_INPUT,
+            activeforeground=Theme.TEXT_PRIMARY,
+            activebackground=Theme.BG_CARD,
+            highlightthickness=0,
+            relief="flat"
+        )
+        self.language_menu["menu"].config(
+            font=("Helvetica Neue", 10),
+            fg=Theme.TEXT_PRIMARY,
+            bg=Theme.BG_INPUT,
+            activeforeground=Theme.TEXT_PRIMARY,
+            activebackground=Theme.BG_CARD
+        )
+        self.language_menu.pack(side="left")
+        row += 1
+
         # Save button
         self.save_button = RoundedButton(
             settings_inner,
-            text="Save",
+            text=t("buttons.save"),
             command=self.save_current_settings,
             width=80,
             height=32,
@@ -615,7 +619,7 @@ class PomodoroTimer:
         # Keyboard shortcuts hint
         self.shortcuts_label = tk.Label(
             self.master,
-            text="Space: start/pause  ·  R: reset  ·  S: skip",
+            text=t("shortcuts.hint"),
             font=("Helvetica Neue", 9),
             fg=Theme.TEXT_DISABLED,
             bg=Theme.BG_PRIMARY
@@ -790,7 +794,7 @@ class PomodoroTimer:
     def _apply_idle_state(self) -> None:
         """Apply idle visual state."""
         self._stop_pulse()
-        self.mode_label.config(text="FOCUS", fg=Theme.TEXT_MUTED)
+        self.mode_label.config(text=t("modes.focus"), fg=Theme.TEXT_MUTED)
         self.time_label.config(fg=Theme.TEXT_PRIMARY)
         self.message_label.config(text="")
         self.current_accent = Theme.TEXT_MUTED
@@ -800,14 +804,16 @@ class PomodoroTimer:
 
     def _apply_work_state(self) -> None:
         """Apply work mode visual state."""
-        self.mode_label.config(text="FOCUS", fg=Theme.FOCUS_PRIMARY)
+        self.mode_label.config(text=t("modes.focus"), fg=Theme.FOCUS_PRIMARY)
         self.time_label.config(fg=Theme.FOCUS_PRIMARY)
         # Show motivational quote when starting
         if self.time_left == self.work_time:
-            quote = random.choice(FOCUS_QUOTES)
-            self.message_label.config(text=quote, fg=Theme.TEXT_MUTED)
-            # Fade out quote after 3 seconds
-            self.master.after(3000, lambda: self.message_label.config(text="") if self.is_working else None)
+            focus_quotes = get_message_list("messages.focus_quotes")
+            if focus_quotes:
+                quote = random.choice(focus_quotes)
+                self.message_label.config(text=quote, fg=Theme.TEXT_MUTED)
+                # Fade out quote after 3 seconds
+                self.master.after(3000, lambda: self.message_label.config(text="") if self.is_working else None)
         else:
             self.message_label.config(text="")
         self.current_accent = Theme.FOCUS_PRIMARY
@@ -816,7 +822,7 @@ class PomodoroTimer:
 
     def _apply_warning_state(self) -> None:
         """Apply warning state with pulse."""
-        self.mode_label.config(text="FINISHING", fg=Theme.WARNING_PRIMARY)
+        self.mode_label.config(text=t("modes.finishing"), fg=Theme.WARNING_PRIMARY)
         self.time_label.config(fg=Theme.WARNING_PRIMARY)
         self.current_accent = Theme.WARNING_PRIMARY
         self._update_progress_ring()
@@ -827,8 +833,9 @@ class PomodoroTimer:
     def _apply_break_state(self) -> None:
         """Apply break mode."""
         self._stop_pulse()
-        self.current_message = random.choice(BREAK_MESSAGES)
-        self.mode_label.config(text="BREAK", fg=Theme.BREAK_PRIMARY)
+        break_messages = get_message_list("messages.break")
+        self.current_message = random.choice(break_messages) if break_messages else ""
+        self.mode_label.config(text=t("modes.break"), fg=Theme.BREAK_PRIMARY)
         self.time_label.config(fg=Theme.BREAK_PRIMARY)
         self.message_label.config(text=self.current_message, fg=Theme.BREAK_PRIMARY)
         self.current_accent = Theme.BREAK_PRIMARY
@@ -838,8 +845,9 @@ class PomodoroTimer:
     def _apply_long_break_state(self) -> None:
         """Apply long break mode."""
         self._stop_pulse()
-        self.current_message = random.choice(LONG_BREAK_MESSAGES)
-        self.mode_label.config(text="LONG BREAK", fg=Theme.LONG_BREAK_PRIMARY)
+        long_break_messages = get_message_list("messages.long_break")
+        self.current_message = random.choice(long_break_messages) if long_break_messages else ""
+        self.mode_label.config(text=t("modes.long_break"), fg=Theme.LONG_BREAK_PRIMARY)
         self.time_label.config(fg=Theme.LONG_BREAK_PRIMARY)
         self.message_label.config(text=self.current_message, fg=Theme.LONG_BREAK_PRIMARY)
         self.current_accent = Theme.LONG_BREAK_PRIMARY
@@ -853,8 +861,8 @@ class PomodoroTimer:
 
         parts = []
         if today['pomodoros'] > 0:
-            parts.append(f"Today: {today['pomodoros']}")
-        parts.append(f"Total: {total['total_pomodoros']}")
+            parts.append(t("stats.today", count=today['pomodoros']))
+        parts.append(t("stats.total", count=total['total_pomodoros']))
 
         self.stats_label.config(text="  ·  ".join(parts))
         self._update_progress_dots()
@@ -863,6 +871,55 @@ class PomodoroTimer:
         """Update auto-start settings."""
         self.auto_start_breaks = self.auto_break_var.get()
         self.auto_start_work = self.auto_work_var.get()
+
+    def _on_language_change(self, language: str) -> None:
+        """Handle language change - requires restart."""
+        set_language(language)
+        # Update UI elements that can be updated without restart
+        self._refresh_ui_texts()
+
+    def _refresh_ui_texts(self) -> None:
+        """Refresh all UI texts after language change."""
+        # Update window title
+        self.master.title(t("app.name"))
+
+        # Update buttons
+        self.start_button.set_text(t("buttons.start"))
+        if self.paused:
+            self.pause_button.set_text(t("buttons.resume"))
+        else:
+            self.pause_button.set_text(t("buttons.pause"))
+        self.reset_button.set_text(t("buttons.reset"))
+        self.skip_button.config(text=t("buttons.skip"))
+        self.settings_toggle.config(text=t("buttons.settings"))
+        self.save_button.set_text(t("buttons.save"))
+
+        # Update mode label based on current state
+        if self.timer_running or self.paused:
+            if self.is_working:
+                if self.time_left <= WARNING_THRESHOLD * self.work_time:
+                    self.mode_label.config(text=t("modes.finishing"))
+                else:
+                    self.mode_label.config(text=t("modes.focus"))
+            else:
+                if self.time_left == self.long_break_time:
+                    self.mode_label.config(text=t("modes.long_break"))
+                else:
+                    self.mode_label.config(text=t("modes.break"))
+        else:
+            self.mode_label.config(text=t("modes.focus"))
+
+        # Update shortcuts hint
+        self.shortcuts_label.config(text=t("shortcuts.hint"))
+
+        # Update checkboxes
+        self.auto_break_check.config(text=t("settings.auto_breaks"))
+        self.auto_work_check.config(text=t("settings.auto_work"))
+
+        # Update stats display
+        self.update_stats_display()
+
+        logger.info("UI texts refreshed for language: %s", get_current_language())
 
     def select_all_text(self, event: tk.Event) -> None:
         """Select all text in entry."""
@@ -885,13 +942,14 @@ class PomodoroTimer:
             "pomodoros_until_long_break": self.pomodoros_until_long_break,
             "auto_start_breaks": self.auto_start_breaks,
             "auto_start_work": self.auto_start_work,
+            "language": get_current_language(),
         })
         if save_settings(self.settings):
-            self.save_button.set_text("Saved")
-            self.master.after(1500, lambda: self.save_button.set_text("Save"))
+            self.save_button.set_text(t("buttons.saved"))
+            self.master.after(1500, lambda: self.save_button.set_text(t("buttons.save")))
             logger.info("Settings saved")
         else:
-            messagebox.showerror("Error", "Could not save settings")
+            messagebox.showerror("Error", t("errors.save_settings"))
             logger.error("Failed to save settings")
 
     def update_times(self, event: tk.Event | None = None) -> None:
@@ -906,22 +964,22 @@ class PomodoroTimer:
             pomo_count = int(self.pomo_count_entry.get())
 
             if not (1 <= work_minutes <= 1440):
-                self._show_validation_error("Work: 1-1440")
+                self._show_validation_error(t("validation.work_range"))
                 self._reset_entry_values()
                 return
 
             if not (1 <= break_minutes <= 1440):
-                self._show_validation_error("Break: 1-1440")
+                self._show_validation_error(t("validation.break_range"))
                 self._reset_entry_values()
                 return
 
             if not (1 <= long_break_minutes <= 1440):
-                self._show_validation_error("Long break: 1-1440")
+                self._show_validation_error(t("validation.long_break_range"))
                 self._reset_entry_values()
                 return
 
             if not (1 <= pomo_count <= 10):
-                self._show_validation_error("Sessions: 1-10")
+                self._show_validation_error(t("validation.sessions_range"))
                 self._reset_entry_values()
                 return
 
@@ -936,7 +994,7 @@ class PomodoroTimer:
 
             logger.info("Settings updated")
         except ValueError:
-            self._show_validation_error("Invalid number")
+            self._show_validation_error(t("validation.invalid_number"))
             self._reset_entry_values()
 
     def _show_validation_error(self, message: str) -> None:
@@ -994,15 +1052,16 @@ class PomodoroTimer:
             logger.info("Pomodoro completed: %d", self.pomodoro_count)
 
             # Send notification
-            completion_msg = random.choice(COMPLETION_MESSAGES)
+            completion_messages = get_message_list("messages.completion")
+            completion_msg = random.choice(completion_messages) if completion_messages else ""
             if self.pomodoro_count % self.pomodoros_until_long_break == 0:
                 self.time_left = self.long_break_time
                 self._apply_long_break_state()
-                self._send_notification("🎉 " + completion_msg, "Time for a long break! You've earned it.")
+                self._send_notification("🎉 " + completion_msg, t("notifications.long_break_title"))
             else:
                 self.time_left = self.break_time
                 self._apply_break_state()
-                self._send_notification("✅ " + completion_msg, f"Take a {self.break_time // 60} minute break.")
+                self._send_notification("✅ " + completion_msg, t("notifications.break_title", minutes=self.break_time // 60))
 
             self.update_stats_display()
 
@@ -1012,10 +1071,10 @@ class PomodoroTimer:
             else:
                 self.timer_running = False
                 self.is_working = False
-                self.pause_button.set_text("Pause")
+                self.pause_button.set_text(t("buttons.pause"))
         else:
             self.time_left = self.work_time
-            self._send_notification("⏰ Break over!", "Ready to focus again?")
+            self._send_notification("⏰ " + t("notifications.break_over_title"), t("notifications.break_over_message"))
 
             if self.auto_start_work:
                 self.is_working = True
@@ -1024,7 +1083,7 @@ class PomodoroTimer:
             else:
                 self.timer_running = False
                 self.is_working = True
-                self.pause_button.set_text("Pause")
+                self.pause_button.set_text(t("buttons.pause"))
                 self._apply_idle_state()
 
     def skip_phase(self) -> None:
@@ -1049,7 +1108,7 @@ class PomodoroTimer:
             self.is_working = True
 
         self.time_label.config(text=self.format_time(self.time_left))
-        self.pause_button.set_text("Pause")
+        self.pause_button.set_text(t("buttons.pause"))
         logger.info("Phase skipped")
 
     def start_timer(self) -> None:
@@ -1061,7 +1120,7 @@ class PomodoroTimer:
                 self.paused = False
 
             self.timer_running = True
-            self.pause_button.set_text("Pause")
+            self.pause_button.set_text(t("buttons.pause"))
 
             if self.is_working:
                 self._apply_work_state()
@@ -1079,7 +1138,7 @@ class PomodoroTimer:
         if self.timer_running:
             self.timer_running = False
             self.paused = True
-            self.pause_button.set_text("Resume")
+            self.pause_button.set_text(t("buttons.resume"))
             logger.info("Timer paused")
         elif self.paused:
             self.start_timer()
@@ -1093,7 +1152,7 @@ class PomodoroTimer:
         self._apply_idle_state()
         self.time_label.config(text=self.format_time(self.time_left))
         self._reset_entry_values()
-        self.pause_button.set_text("Pause")
+        self.pause_button.set_text(t("buttons.pause"))
         logger.info("Timer reset")
 
     def reset_session(self) -> None:
